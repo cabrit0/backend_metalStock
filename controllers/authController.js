@@ -139,7 +139,7 @@ const login = async (req, res) => {
         res.status(500).json({
             success: false,
             message: 'Erro ao fazer login',
-            error: error.message // Temporarily show error for debugging
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
         });
     }
 };
