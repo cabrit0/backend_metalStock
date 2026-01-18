@@ -45,6 +45,16 @@ const importProducts = async (data, columnMapping, userId) => {
         skipped: 0
     };
 
+    // Normalize unit value to allowed enum
+    const normalizeUnit = (unit) => {
+        const u = String(unit || 'kg').toLowerCase().trim();
+        if (u === 'kg' || u === 'kgs' || u === 'kilos') return 'kg';
+        if (u === 'un' || u === 'unid' || u === 'unidade' || u === 'unidades' || u === 'pcs' || u === 'pc') return 'un';
+        if (u === 'm' || u === 'metros' || u === 'metro' || u === 'ml') return 'm';
+        if (u === 'lt' || u === 'litros' || u === 'litro' || u === 'l') return 'lt';
+        return 'kg'; // default
+    };
+
     for (let i = 0; i < data.length; i++) {
         const row = data[i];
         const rowNumber = i + 2; // +2 because Excel is 1-indexed and has header
@@ -52,7 +62,7 @@ const importProducts = async (data, columnMapping, userId) => {
         try {
             // Extract values using column mapping
             const code = String(row[columnMapping.code] || '').trim().toUpperCase();
-            const description = String(row[columnMapping.description] || '').trim();
+            const description = String(row[columnMapping.description] || code || '').trim();
 
             if (!code) {
                 results.skipped++;
@@ -65,11 +75,11 @@ const importProducts = async (data, columnMapping, userId) => {
             const minStock = parseFloat(row[columnMapping.minStock]) || 0;
             const safetyStock = parseFloat(row[columnMapping.safetyStock]) || minStock * 1.5;
             const lastPrice = parseFloat(row[columnMapping.price]) || 0;
-            const unit = String(row[columnMapping.unit] || 'kg').toLowerCase();
+            const unit = normalizeUnit(row[columnMapping.unit]);
 
             // Detect material type and shape from description
-            const materialType = Product.detectMaterialType(description);
-            const shape = Product.detectShape(code, description);
+            const materialType = Product.detectMaterialType(description || code);
+            const shape = Product.detectShape(code, description || code);
             const diameter = Product.extractDiameter(code);
 
             // Check if product exists
@@ -77,10 +87,10 @@ const importProducts = async (data, columnMapping, userId) => {
 
             if (product) {
                 // Update existing product
-                product.description = description || product.description;
-                product.weightPerMeter = weightPerMeter || product.weightPerMeter;
-                product.stockConfig.minStock = minStock || product.stockConfig.minStock;
-                product.stockConfig.safetyStock = safetyStock || product.stockConfig.safetyStock;
+                if (description) product.description = description;
+                if (weightPerMeter > 0) product.weightPerMeter = weightPerMeter;
+                if (minStock > 0) product.stockConfig.minStock = minStock;
+                if (safetyStock > 0) product.stockConfig.safetyStock = safetyStock;
                 product.stockConfig.unit = unit;
                 if (lastPrice > 0) {
                     product.financial.lastPrice = lastPrice;
