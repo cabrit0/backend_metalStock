@@ -34,6 +34,10 @@ app.use('/api/auth', require('./routes/authRoutes'));
 // app.use('/api/products', require('./routes/productRoutes'));
 // app.use('/api/stock', require('./routes/stockRoutes'));
 // app.use('/api/movements', require('./routes/movementRoutes'));
+app.use('/api/reports', require('./routes/reportRoutes'));
+app.use('/api/notifications', require('./routes/notificationRoutes'));
+app.use('/api/projects', require('./routes/projectRoutes'));
+app.use('/api/import', require('./routes/importRoutes'));
 
 // Error handling middleware
 app.use((err, req, res, next) => {

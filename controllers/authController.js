@@ -217,10 +217,126 @@ const updatePassword = async (req, res) => {
     }
 };
 
+/**
+ * @desc    Get all users (Admin only)
+ * @route   GET /api/auth/users
+ * @access  Private/Admin
+ */
+const getUsers = async (req, res) => {
+    try {
+        const users = await User.find().select('-password').sort('-createdAt');
+        res.json({
+            success: true,
+            data: users
+        });
+    } catch (error) {
+        console.error('GetUsers error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Erro ao obter utilizadores'
+        });
+    }
+};
+
+/**
+ * @desc    Delete user (Admin only)
+ * @route   DELETE /api/auth/users/:id
+ * @access  Private/Admin
+ */
+const deleteUser = async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'Utilizador não encontrado'
+            });
+        }
+
+        // Prevent deleting self
+        if (user._id.toString() === req.user.id) {
+            return res.status(400).json({
+                success: false,
+                message: 'Não pode eliminar a sua própria conta'
+            });
+        }
+
+        await user.deleteOne();
+
+        res.json({
+            success: true,
+            message: 'Utilizador eliminado com sucesso',
+            data: {}
+        });
+    } catch (error) {
+        console.error('DeleteUser error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Erro ao eliminar utilizador'
+        });
+    }
+};
+
+/**
+ * @desc    Update user (Admin only)
+ * @route   PUT /api/auth/users/:id
+ * @access  Private/Admin
+ */
+const updateUser = async (req, res) => {
+    try {
+        const { name, role, active } = req.body;
+        const user = await User.findById(req.params.id);
+
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: 'Utilizador não encontrado'
+            });
+        }
+
+        // Prevent modifying own role
+        if (user._id.toString() === req.user.id && role && role !== user.role) {
+            return res.status(400).json({
+                success: false,
+                message: 'Não pode alterar a sua própria role'
+            });
+        }
+
+        // Update fields
+        if (name) user.name = name;
+        if (role) user.role = role;
+        if (typeof active === 'boolean') user.active = active;
+
+        await user.save();
+
+        res.json({
+            success: true,
+            message: 'Utilizador atualizado com sucesso',
+            data: {
+                id: user._id,
+                name: user.name,
+                email: user.email,
+                role: user.role,
+                active: user.active
+            }
+        });
+    } catch (error) {
+        console.error('UpdateUser error:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Erro ao atualizar utilizador'
+        });
+    }
+};
+
 module.exports = {
     register,
     login,
     getMe,
     updatePassword,
+    getUsers,
+    deleteUser,
+    updateUser,
     generateToken
 };
